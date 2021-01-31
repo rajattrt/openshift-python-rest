@@ -1,0 +1,243 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: rest
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: rest
+    name: rest
+  spec:
+    ports:
+    - name: 5000-tcp
+      port: 5000
+      protocol: TCP
+      targetPort: 5000
+    selector:
+      app: rest
+      deploymentconfig: rest
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    generation: 6
+    labels:
+      app: rest
+    name: rest
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: rest
+      deploymentconfig: rest
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: rest
+          deploymentconfig: rest
+      spec:
+        containers:
+        - env:
+          - name: WHO
+            value: ${WHO}
+          envFrom:
+          - secretRef:
+              name: sec
+          image: 172.30.1.1:5000/rest/rest@sha256:a8c51fa58ec03a8395892de8bd79cb7703ba37f1967f862fb2161d409713dd57
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 5000
+              scheme: HTTP
+            initialDelaySeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: rest
+          ports:
+          - containerPort: 5000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - rest
+        from:
+          kind: ImageStreamTag
+          name: rest:latest
+          namespace: rest
+        lastTriggeredImage: 172.30.1.1:5000/rest/rest@sha256:a8c51fa58ec03a8395892de8bd79cb7703ba37f1967f862fb2161d409713dd57
+      type: ImageChange
+  status:
+    availableReplicas: 0
+    latestVersion: 0
+    observedGeneration: 0
+    replicas: 0
+    unavailableReplicas: 0
+    updatedReplicas: 0
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: rest
+    name: rest
+  spec:
+    failedBuildsHistoryLimit: 5
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: rest:latest
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      git:
+        uri: https://github.com/sumit-tembe/openshift-rest.git
+      type: Git
+    strategy:
+      dockerStrategy:
+        env:
+        - name: WHO
+          value: ${WHO}
+        from:
+          kind: ImageStreamTag
+          name: python:alpine3.7
+      type: Docker
+    successfulBuildsHistoryLimit: 5
+    triggers:
+    - github:
+        secret: Oun460UtwfH0zECzeiF4
+      type: GitHub
+    - generic:
+        secret: qY2ejegAOL07f9NcHe_5
+      type: Generic
+    - type: ConfigChange
+    - imageChange: {}
+      type: ImageChange
+  status:
+    lastVersion: 0
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+      openshift.io/image.dockerRepositoryCheck: 2021-01-03T07:04:51Z
+    creationTimestamp: null
+    generation: 2
+    labels:
+      app: rest
+    name: python
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations:
+        openshift.io/imported-from: python:alpine3.7
+      from:
+        kind: DockerImage
+        name: 172.30.1.1:5000/rest/python:alpine3.7
+      generation: 2
+      importPolicy: {}
+      name: alpine3.7
+      referencePolicy:
+        type: Source
+  status:
+    dockerImageRepository: ""
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: rest
+    name: rest
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: 172.30.1.1:5000/rest/rest:latest
+      generation: null
+      importPolicy: {}
+      name: latest
+      referencePolicy:
+        type: ""
+  status:
+    dockerImageRepository: ""
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: null
+    labels:
+      app: rest
+    name: rest
+  spec:
+    host: rest-rest.192.168.99.113.nip.io
+    port:
+      targetPort: 5000-tcp
+    to:
+      kind: Service
+      name: rest
+      weight: 100
+    wildcardPolicy: None
+  status:
+    ingress:
+    - conditions:
+      - lastTransitionTime: 2021-01-03T07:09:50Z
+        status: "True"
+        type: Admitted
+      host: rest-rest.192.168.99.113.nip.io
+      routerName: router
+      wildcardPolicy: None
+parameters:
+- name: WHO
+  displayName: WHOOOOOO
+  description: Who is current user
+  required: true
