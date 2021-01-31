@@ -4,14 +4,14 @@ from flask import Flask
 import os
 
 app = Flask(__name__)
-_42 = os.environ.get('42')
+_42 = os.environ.get('_42')
 
 @app.route('/')
 def hello_world():
     if _42:
         return _42
     else:
-        return 'Hello World!!'
+        return 'Hello World!!\n'
 
 @app.route('/health')
 def health():
